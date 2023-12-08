@@ -6,14 +6,14 @@ enum ResultType {
 }
 
 fn is_operator(c: char) -> bool {
-    matches!(c, '+' | '-' | '*' | '/' | '^')
+    matches!(c, '+' | '-' | '*' | '/' | '^' | '(' | ')')
 }
 
 fn map_operator(c: char) -> (char, u32) {
     match c {
     '+' => {
         (c, 2)
-    },
+    }
     '-' => {
         (c, 1)
     }
@@ -22,10 +22,16 @@ fn map_operator(c: char) -> (char, u32) {
     }
     '/' => {
        (c, 3)
-    },
+    }
     '^' => {
         (c, 5)
-    },
+    }
+    '(' => {
+        (c, 6)
+    }
+    ')' => {
+        (c, 7)
+    }
     _ => (c, 0),
     }
 }
@@ -37,14 +43,27 @@ fn tokenize(input: &str, int_stack: &mut Vec<i32>, char_stack: &mut Vec<(char, u
         if i.is_ascii_digit(){
             num.push(i);
         } else if is_operator(i) {
-            if let Ok(value) = num.parse::<i32>() {
-                int_stack.push(value);
+            if i == '(' || i == ')'{
+                print!("OOOOOOOOOOO");
+                if map_operator(i).1 == 0 {
+                    return ResultType::Failed
+                } else {
+                    char_stack.push(map_operator(i));
+                }
             } else {
-                println!("Invalid number");
-                return ResultType::Failed
+                if let Ok(value) = num.parse::<i32>() {
+                    int_stack.push(value);
+                } else {
+                    println!("Invalid number");
+                    return ResultType::Failed
+                }
+                if map_operator(i).1 == 0 {
+                    return ResultType::Failed
+                } else {
+                    char_stack.push(map_operator(i));
+                }
+                num.clear();
             }
-            char_stack.push(map_operator(i));
-            num.clear();
         } else if i.is_alphabetic() {
             println!("Invalid Input");
             return ResultType::Failed
@@ -58,6 +77,7 @@ fn tokenize(input: &str, int_stack: &mut Vec<i32>, char_stack: &mut Vec<(char, u
             return ResultType::Failed
         }
     }
+    /*
     if int_stack.len() > char_stack.len() + 1 {
         println!("Too many numbers");
         return ResultType::Failed
@@ -66,6 +86,7 @@ fn tokenize(input: &str, int_stack: &mut Vec<i32>, char_stack: &mut Vec<(char, u
         println!("Too many Operators");
         return ResultType::Failed
     }
+    */
     ResultType::Success
 }
 
@@ -73,13 +94,36 @@ fn compute(nums: &mut Vec<i32>, operators: &mut Vec<(char, u32)>) -> Option<i32>
     while !operators.is_empty() {
         let mut highest_precedence = 0;
         let mut index = 0;
+        let operator_len = operators.len();
 
         // Find the operator with the highest precedence
         for (i, &(_, precedence)) in operators.iter().enumerate() {
+            if highest_precedence == 6 {
+                break;
+            }
+            if precedence == 7 {
+                return  None;
+            }
             if precedence > highest_precedence {
                 highest_precedence = precedence;
                 index = i;
             }
+        }
+        if highest_precedence == 6 {
+            let parenthesis_index = index.clone();
+            let mut valid_parentheses = false;
+            for i in index..operator_len{
+                if operators[i].0 == ')' {
+                    operators.remove(i);
+                    valid_parentheses = true;
+                    break;
+                }
+                operators[i].1 += 10;
+            }
+            if valid_parentheses == false {
+                return None;
+            }
+            operators.remove(parenthesis_index);
         }
 
         if index >= nums.len() - 1 {
@@ -111,8 +155,10 @@ fn compute(nums: &mut Vec<i32>, operators: &mut Vec<(char, u32)>) -> Option<i32>
         nums[index] = result;
         operators.remove(index);
     }
-
-    Some(nums[0])
+    let answer = nums[0];
+    nums.clear();
+    operators.clear();
+    Some(answer)
 }
 
 fn main() {
