@@ -36,57 +36,34 @@ fn map_operator(c: char) -> (char, u32) {
     }
 }
 
+fn group_digits(input: &str) -> Vec<i32> {
+    let mut nums = Vec::new();
+    let mut current_number = String::new();
 
-fn tokenize(input: &str, int_stack: &mut Vec<i32>, char_stack: &mut Vec<(char, u32)>) -> ResultType{
-    let mut num = String::new();
-    for i in input.chars(){
-        if i.is_ascii_digit(){
-            num.push(i);
-        } else if is_operator(i) {
-            if i == '(' || i == ')'{
-                print!("OOOOOOOOOOO");
-                if map_operator(i).1 == 0 {
-                    return ResultType::Failed
-                } else {
-                    char_stack.push(map_operator(i));
-                }
-            } else {
-                if let Ok(value) = num.parse::<i32>() {
-                    int_stack.push(value);
-                } else {
-                    println!("Invalid number");
-                    return ResultType::Failed
-                }
-                if map_operator(i).1 == 0 {
-                    return ResultType::Failed
-                } else {
-                    char_stack.push(map_operator(i));
-                }
-                num.clear();
+    for c in input.chars() {
+        if c.is_ascii_digit() {
+            current_number.push(c);
+        } else if !current_number.is_empty() {
+            if let Ok(num) = current_number.parse::<i32>() {
+                nums.push(num);
             }
-        } else if i.is_alphabetic() {
-            println!("Invalid Input");
-            return ResultType::Failed
+            current_number.clear();
         }
     }
-    if !num.is_empty(){
-        if let Ok(value) = num.parse::<i32>(){
-            int_stack.push(value);
-        } else{
-            println!("Failed");
-            return ResultType::Failed
+
+    if !current_number.is_empty() {
+        if let Ok(num) = current_number.parse::<i32>() {
+            nums.push(num);
         }
     }
-    /*
-    if int_stack.len() > char_stack.len() + 1 {
-        println!("Too many numbers");
-        return ResultType::Failed
-    }
-    if char_stack.len() > int_stack.len() - 1 {
-        println!("Too many Operators");
-        return ResultType::Failed
-    }
-    */
+
+    nums
+}
+
+fn tokenize(input: &str, int_stack: &mut Vec<i32>, char_stack: &mut Vec<(char, u32)>) -> ResultType {
+    char_stack.extend(input.chars().filter(|&c| is_operator(c)).map(map_operator));
+    int_stack.extend(group_digits(input));
+
     ResultType::Success
 }
 
@@ -109,8 +86,9 @@ fn compute(nums: &mut Vec<i32>, operators: &mut Vec<(char, u32)>) -> Option<i32>
                 index = i;
             }
         }
+        
         if highest_precedence == 6 {
-            let parenthesis_index = index.clone();
+            let parenthesis_index = index;
             let mut valid_parentheses = false;
             for i in index..operator_len{
                 if operators[i].0 == ')' {
@@ -120,7 +98,7 @@ fn compute(nums: &mut Vec<i32>, operators: &mut Vec<(char, u32)>) -> Option<i32>
                 }
                 operators[i].1 += 10;
             }
-            if valid_parentheses == false {
+            if !valid_parentheses {
                 return None;
             }
             operators.remove(parenthesis_index);
