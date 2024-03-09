@@ -1,5 +1,5 @@
 use std::io;
-
+//hello github
 enum ResultType {
     Failed,
     Success,
